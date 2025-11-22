@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kuis & Spin Hadiah - Harjad Tanah Laut</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+      /* ======================
+   GLOBAL & BACKGROUND
+====================== */
+      * {
+        box-sizing: border-box;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Arial, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        color: #0c4a6e;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Dekorasi gradient biru dengan animasi */
+      body::before {
+        content: "";
+        position: fixed;
+        top: -50%;
+        left: -10%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(
+          circle,
+          rgba(14, 165, 233, 0.2) 0%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        z-index: 0;
+        animation: pulse-gradient 4s ease-in-out infinite;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        bottom: -30%;
+        right: -10%;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(
+          circle,
+          rgba(56, 189, 248, 0.18) 0%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        z-index: 0;
+        animation: pulse-gradient 5s ease-in-out infinite reverse;
+      }
+
+      @keyframes pulse-gradient {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+      }
+
+      /* Elemen bergerak dekoratif abstract */
+      .floating-element {
+        position: fixed;
+        opacity: 0.4;
+        z-index: 0;
+        filter: blur(1px);
+      }
+
+      .floating-1 {
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+        top: 20%;
+        right: 8%;
+        clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        animation: float1 8s ease-in-out infinite;
+      }
+
+      .floating-2 {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #38bdf8, #7dd3fc);
+        top: 55%;
+        left: 5%;
+        clip-path: polygon(
+          30% 0%,
+          70% 0%,
+          100% 30%,
+          100% 70%,
+          70% 100%,
+          30% 100%,
+          0% 70%,
+          0% 30%
+        );
+        animation: float2 10s ease-in-out infinite;
+      }
+
+      .floating-3 {
+        width: 140px;
+        height: 140px;
+        background: linear-gradient(135deg, #0284c7, #0ea5e9);
+        bottom: 12%;
+        right: 10%;
+        clip-path: polygon(
+          25% 0%,
+          75% 0%,
+          100% 50%,
+          75% 100%,
+          25% 100%,
+          0% 50%
+        );
+        animation: float3 12s ease-in-out infinite;
+      }
+
+      .floating-4 {
+        width: 90px;
+        height: 90px;
+        background: linear-gradient(135deg, #7dd3fc, #bae6fd);
+        bottom: 25%;
+        left: 7%;
+        clip-path: polygon(
+          50% 0%,
+          90% 20%,
+          100% 60%,
+          75% 100%,
+          25% 100%,
+          0% 60%,
+          10% 20%
+        );
+        animation: float4 9s ease-in-out infinite;
+      }
+
+      .floating-5 {
+        width: 110px;
+        height: 110px;
+        background: linear-gradient(135deg, #0ea5e9, #7dd3fc);
+        top: 40%;
+        right: 15%;
+        clip-path: polygon(
+          50% 0%,
+          80% 10%,
+          100% 35%,
+          100% 70%,
+          80% 90%,
+          50% 100%,
+          20% 90%,
+          0% 70%,
+          0% 35%,
+          20% 10%
+        );
+        animation: float5 11s ease-in-out infinite;
+      }
+
+      .floating-6 {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+        top: 70%;
+        left: 12%;
+        clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        animation: float6 7s ease-in-out infinite;
+      }
+
+      @keyframes float1 {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0deg) scale(1);
+        }
+        33% {
+          transform: translateY(-30px) rotate(120deg) scale(1.1);
+        }
+        66% {
+          transform: translateY(-15px) rotate(240deg) scale(0.9);
+        }
+      }
+
+      @keyframes float2 {
+        0%,
+        100% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+        50% {
+          transform: translate(25px, -25px) rotate(180deg);
+        }
+      }
+
+      @keyframes float3 {
+        0%,
+        100% {
+          transform: translateX(0) rotate(0deg) scale(1);
+        }
+        25% {
+          transform: translateX(-20px) rotate(90deg) scale(1.15);
+        }
+        50% {
+          transform: translateX(-10px) rotate(180deg) scale(0.95);
+        }
+        75% {
+          transform: translateX(-25px) rotate(270deg) scale(1.05);
+        }
+      }
+
+      @keyframes float4 {
+        0%,
+        100% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+        40% {
+          transform: translate(20px, -30px) rotate(-140deg);
+        }
+        80% {
+          transform: translate(-15px, -15px) rotate(-280deg);
+        }
+      }
+
+      @keyframes float5 {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0deg);
+        }
+        50% {
+          transform: translateY(-40px) rotate(-180deg);
+        }
+      }
+
+      @keyframes float6 {
+        0%,
+        100% {
+          transform: translate(0, 0) rotate(0deg);
+        }
+        33% {
+          transform: translate(-20px, 20px) rotate(90deg);
+        }
+        66% {
+          transform: translate(15px, -15px) rotate(180deg);
+        }
+      }
+
+      /* ======================
+   LAYOUT UTAMA
+====================== */
+      .page-wrapper {
+        width: 100%;
+        max-width: 1100px;
+        padding: 16px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ======================
+   HEADER LOGO & TITLE
+====================== */
+      .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .header-photo {
+        flex-shrink: 0;
+        width: 120px;
+        height: auto;
+      }
+      .header-photo img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+      }
+
+      .header-logo {
+        flex: 1;
+        text-align: center;
+      }
+      .header-logo img {
+        max-height: 120px;
+        width: auto;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+      }
+
+      @media (max-width: 768px) {
+        .header-container {
+          flex-direction: column;
+        }
+        .header-photo {
+          width: 100px;
+        }
+        .header-logo img {
+          max-height: 100px;
+        }
+      }
+
+      .title-block {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      .title-block h1 {
+        margin: 0 0 8px 0;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #0c4a6e;
+        text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+        animation: fadeInDown 0.8s ease-out;
+      }
+      .title-block .subtitle {
+        font-size: 0.95rem;
+        color: #075985;
+        font-style: italic;
+        animation: fadeInUp 0.8s ease-out 0.2s both;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ======================
+   GLASS CARD
+====================== */
+      .glass {
+        background: rgba(255, 255, 255, 0.95);
+        border: 2px solid rgba(14, 165, 233, 0.2);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(14, 165, 233, 0.15);
+        backdrop-filter: blur(12px);
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .glass:hover {
+        box-shadow: 0 25px 70px rgba(14, 165, 233, 0.25);
+        transform: translateY(-2px);
+      }
+
+      /* Foto Bupati & Camat sejajar dengan logo */
+      .header-container .photo-left {
+        order: 1;
+      }
+      .header-container .header-logo {
+        order: 2;
+      }
+      .header-container .photo-right {
+        order: 3;
+      }
+      .photo-left img,
+      .photo-right img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .header-container {
+          flex-direction: column;
+        }
+        .header-photo {
+          width: 100px;
+        }
+        .header-logo img {
+          max-height: 100px;
+        }
+
+        .floating-element {
+          display: none;
+        }
+      }
+
+      /* ======================
+   QUIZ
+====================== */
+      #quizCard {
+        margin-bottom: 18px;
+      }
+
+      .question {
+        background: rgba(240, 249, 255, 0.6);
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        border: 2px solid rgba(186, 230, 253, 0.8);
+        transition: all 0.3s ease;
+      }
+      .question:hover {
+        background: rgba(224, 242, 254, 0.8);
+        border-color: #7dd3fc;
+      }
+
+      .question-text {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #0c4a6e;
+      }
+
+      .options label {
+        display: block;
+        font-size: 0.88rem;
+        margin-bottom: 5px;
+        cursor: pointer;
+        color: #0e7490;
+        transition: color 0.2s;
+      }
+      .options label:hover {
+        color: #0369a1;
+      }
+      .options input[type="radio"] {
+        margin-right: 6px;
+        accent-color: #0ea5e9;
+      }
+
+      .quiz-actions {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.9rem;
+      }
+
+      button {
+        cursor: pointer;
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 24px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #0ea5e9, #0284c7);
+        color: white;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.4);
+        transition: all 0.3s ease;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.6);
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+
+      .score-info {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #0c4a6e;
+        background: rgba(224, 242, 254, 0.5);
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 2px solid #bae6fd;
+      }
+
+      #statusText {
+        margin-top: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #0369a1;
+        padding: 10px;
+        background: rgba(240, 249, 255, 0.7);
+        border-radius: 12px;
+        border-left: 4px solid #0ea5e9;
+      }
+
+      /* ======================
+   WHEEL
+====================== */
+      #wheelSection {
+        display: none;
+      }
+
+      .wheel-title {
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-top: 0;
+        margin-bottom: 16px;
+        color: #0c4a6e;
+      }
+
+      .wheel-container {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        margin: 0 auto;
+      }
+      @media (min-width: 768px) {
+        .wheel-container {
+          width: 340px;
+          height: 340px;
+        }
+      }
+
+      .pointer {
+        position: absolute;
+        top: -32px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 18px solid transparent;
+        border-right: 18px solid transparent;
+        border-top: 32px solid #fbbf24;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        z-index: 10;
+      }
+
+      #wheelCanvas {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.2));
+      }
+
+      .wheel-actions {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .btn-outline {
+        background: transparent;
+        border: 2px solid #0ea5e9;
+        color: #0e7490;
+        box-shadow: none;
+      }
+      .btn-outline:hover {
+        background: #0ea5e9;
+        color: white;
+      }
+
+      .spin-btn-enabled {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 12px rgba(14, 165, 233, 0);
+        }
+      }
+
+      #resultText {
+        margin-top: 16px;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0c4a6e;
+        padding: 12px;
+        background: rgba(254, 249, 195, 0.8);
+        border-radius: 12px;
+        border: 2px solid #fbbf24;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Elemen bergerak dekoratif -->
+    <div class="floating-element floating-1"></div>
+    <div class="floating-element floating-2"></div>
+    <div class="floating-element floating-3"></div>
+    <div class="floating-element floating-4"></div>
+    <div class="floating-element floating-5"></div>
+    <div class="floating-element floating-6"></div>
+
+    <div class="page-wrapper">
+      <!-- HEADER: FOTO BUPATI - LOGO - FOTO CAMAT -->
+      <div class="header-container">
+        <div class="header-photo photo-left">
+          <img
+            src="https://placehold.co/200x200/38bdf8/0c4a6e?text=Bupati"
+            alt="Bupati"
+          />
+        </div>
+        <div class="header-logo">
+          <img
+            src="https://placehold.co/400x120/0ea5e9/ffffff?text=Logo+Hari+Jadi+Tanah+Laut"
+            alt="Logo Hari Jadi"
+          />
+        </div>
+        <div class="header-photo photo-right">
+          <img
+            src="https://placehold.co/200x200/38bdf8/0c4a6e?text=Camat"
+            alt="Camat Pelaihari"
+          />
+        </div>
+      </div>
+
+      <div class="title-block">
+        <h1>Kuis Hari Jadi Kabupaten Tanah Laut ke-60</h1>
+        <div class="subtitle">
+          "Bagawi Sabarataan Tanah Laut, Simpun Bakamajuan"
+        </div>
+      </div>
+
+      <!-- AUDIO -->
+      <audio id="spinSound" src="spin.mp3"></audio>
+      <audio id="winSound" src="win.mp3"></audio>
+
+      <!-- KARTU KUIS -->
+      <div id="quizCard" class="glass">
+        <div id="quizContainer"></div>
+
+        <div class="quiz-actions">
+          <button id="checkScoreBtn">Cek Nilai</button>
+          <div class="score-info">
+            Nilai: <span id="scoreValue">0</span> /
+            <span id="maxScoreValue">100</span>
+          </div>
+        </div>
+        <div id="statusText"></div>
+      </div>
+
+      <!-- KARTU WHEEL -->
+      <div id="wheelSection" class="glass">
+        <div class="wheel-title">Wheel of Hadiah</div>
+
+        <div class="wheel-container">
+          <div class="pointer"></div>
+          <canvas id="wheelCanvas" width="500" height="500"></canvas>
+        </div>
+
+        <div class="wheel-actions">
+          <button id="spinButton" disabled>PUTAR</button>
+          <button id="backToQuizBtn" class="btn-outline" type="button">
+            Kembali ke Kuis
+          </button>
+        </div>
+
+        <div id="resultText"></div>
+      </div>
+    </div>
+
+    <script>
+      /* ===========================
+   KONFIGURASI
+=========================== */
+      const POINT_PER_QUESTION = 10;
+      const PASSING_SCORE = 80;
+      const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 menit
+      const SPIN_DURATION = 8000; // 8 detik
+
+      /* ===========================
+   BANK SOAL (20) -> acak 10
+=========================== */
+      const QUESTION_BANK = [
+        {
+          text:
+            "Tahun 2025 Kabupaten Tanah Laut merayakan Hari Jadi ke berapa?",
+          options: ["55", "58", "60", "62"],
+          correctIndex: 2,
+        },
+        {
+          text: "Tema Hari Jadi ke-60 adalah?",
+          options: [
+            "Tanah Laut Berseri",
+            "Bagawi Sabarataan Tanah Laut, Simpun Bakamajuan",
+            "Maju Bersama",
+            "Tala Jaya",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "Ibu kota Kabupaten Tanah Laut?",
+          options: ["Kurau", "Bati-Bati", "Pelaihari", "Bajuin"],
+          correctIndex: 2,
+        },
+        {
+          text: "Makna 'Bagawi Sabarataan' adalah?",
+          options: [
+            "Kerja sendiri",
+            "Gotong royong",
+            "Kerja santai",
+            "Kerja diam",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "RTH Kijang Mas berfungsi sebagai…",
+          options: ["Bandara", "Terminal", "Ruang publik", "Gudang"],
+          correctIndex: 2,
+        },
+        {
+          text: "Arti 'Simpun Bakamajuan'?",
+          options: [
+            "Mundur bersama",
+            "Maju bersama",
+            "Diam bersama",
+            "Berhenti",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "Tanah Laut berada di provinsi?",
+          options: ["Kalteng", "Kalsel", "Kaltim", "Kalbar"],
+          correctIndex: 1,
+        },
+        {
+          text: "Pelaihari merupakan pusat…",
+          options: [
+            "Pertambangan",
+            "Pemerintahan & Ekonomi",
+            "Hutan lindung",
+            "Bandara",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "Jalan santai bertujuan…",
+          options: [
+            "Menambah libur",
+            "Acara formal",
+            "Kekompakan & kesehatan",
+            "Menghindari macet",
+          ],
+          correctIndex: 2,
+        },
+        {
+          text: "Kegiatan umum Hari Jadi?",
+          options: [
+            "Latihan militer",
+            "Donor darah, cek kesehatan, pasar murah",
+            "Balap pesawat",
+            "Lomba kapal perang",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "Pantai Takisung berada di kecamatan…",
+          options: ["Kurau", "Takisung", "Pelaihari", "Tambang Ulang"],
+          correctIndex: 1,
+        },
+        {
+          text: "Gunung Kayangan ada di…",
+          options: ["Takisung", "Bajuin", "Pelaihari", "Kurau"],
+          correctIndex: 1,
+        },
+        {
+          text: "Potensi Tanah Laut?",
+          options: ["Gandum", "Sapi & perkebunan", "Mobil listrik", "Baja"],
+          correctIndex: 1,
+        },
+        {
+          text: "Acara Hari Jadi dihadiri oleh…",
+          options: [
+            "Bupati & masyarakat",
+            "Pilot tempur",
+            "Artis Hollywood",
+            "Kepala negara asing",
+          ],
+          correctIndex: 0,
+        },
+        {
+          text: "Pasar murah bertujuan…",
+          options: [
+            "Naikkan harga",
+            "Ringankan masyarakat",
+            "Jual barang palsu",
+            "Tutup toko",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "Kecamatan dengan wisata pantai?",
+          options: ["Panyipatan", "Pelaihari", "Kurau", "Bajuin"],
+          correctIndex: 0,
+        },
+        {
+          text: "Ikon Pelaihari adalah…",
+          options: [
+            "Monas",
+            "Patung Kijang Mas",
+            "Patung Merlion",
+            "Patung Garuda",
+          ],
+          correctIndex: 1,
+        },
+        {
+          text: "Hari Jadi Tala diperingati bulan…",
+          options: ["Desember", "Januari", "Maret", "April"],
+          correctIndex: 0,
+        },
+        {
+          text: "RTH Kijang Mas terletak di…",
+          options: ["Takisung", "Pelaihari", "Kurau", "Jorong"],
+          correctIndex: 1,
+        },
+        {
+          text: "Tujuan utama Hari Jadi Tala?",
+          options: [
+            "Membuat macet",
+            "Mengenang sejarah & memajukan daerah",
+            "Menghapus ekonomi",
+            "Menutup semua kantor",
+          ],
+          correctIndex: 1,
+        },
+      ];
+
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      const QUESTIONS = shuffle([...QUESTION_BANK]).slice(0, 10);
+      const MAX_SCORE = QUESTIONS.length * POINT_PER_QUESTION;
+      document.getElementById("maxScoreValue").textContent = MAX_SCORE;
+
+      /* ===========================
+   RENDER SOAL
+=========================== */
+      const quizContainer = document.getElementById("quizContainer");
+
+      QUESTIONS.forEach((q, i) => {
+        const box = document.createElement("div");
+        box.className = "question";
+        box.innerHTML = `
+        <div class="question-text">${i + 1}. ${q.text}</div>
+        <div class="options">
+            ${q.options
+              .map(
+                (opt, idx) => `
+                <label>
+                    <input type="radio" name="q${i}" value="${idx}">
+                    ${opt}
+                </label>
+            `
+              )
+              .join("")}
+        </div>
+    `;
+        quizContainer.appendChild(box);
+      });
+
+      /* ===========================
+   LOGIKA KUIS
+=========================== */
+      const quizCard = document.getElementById("quizCard");
+      const wheelSection = document.getElementById("wheelSection");
+      const statusText = document.getElementById("statusText");
+      const scoreValueEl = document.getElementById("scoreValue");
+      const checkScoreBtn = document.getElementById("checkScoreBtn");
+
+      checkScoreBtn.onclick = () => {
+        let score = 0;
+        let answered = 0;
+
+        QUESTIONS.forEach((q, i) => {
+          const sel = document.querySelector(`input[name="q${i}"]:checked`);
+          if (sel) {
+            answered++;
+            if (parseInt(sel.value, 10) === q.correctIndex) {
+              score += POINT_PER_QUESTION;
+            }
+          }
+        });
+
+        scoreValueEl.textContent = score;
+
+        if (answered < QUESTIONS.length) {
+          statusText.textContent =
+            "Jawab semua soal dulu. Terjawab: " +
+            answered +
+            " dari " +
+            QUESTIONS.length +
+            ".";
+          return;
+        }
+
+        if (score >= PASSING_SCORE) {
+          statusText.textContent =
+            "Nilai " +
+            score +
+            ". Selamat! Kamu berhak memutar Wheel of Hadiah.";
+          quizCard.style.display = "none";
+          wheelSection.style.display = "block";
+          enableSpin();
+        } else {
+          statusText.textContent =
+            "Nilai " +
+            score +
+            ". Belum mencapai " +
+            PASSING_SCORE +
+            ". Silakan coba lagi.";
+        }
+      };
+
+      /* ===========================
+   WHEEL
+=========================== */
+      const segments = [
+        "Stiker",
+        "Gantungan Kunci",
+        "Pulpen",
+        "Goodie Bag",
+        "Tumbler",
+        "Payung",
+        "Masker + Stiker",
+        "Coba Lagi",
+      ];
+      const colors = [
+        "#0ea5e9",
+        "#06b6d4",
+        "#14b8a6",
+        "#10b981",
+        "#84cc16",
+        "#eab308",
+        "#f59e0b",
+        "#f97316",
+      ];
+
+      const canvas = document.getElementById("wheelCanvas");
+      const ctx = canvas.getContext("2d");
+      const size = canvas.width;
+      const center = size / 2;
+
+      let currentAngle = 0;
+      let isSpinning = false;
+      let idleTimer = null;
+
+      const spinButton = document.getElementById("spinButton");
+      const backToQuizBtn = document.getElementById("backToQuizBtn");
+      const resultText = document.getElementById("resultText");
+      const spinSound = document.getElementById("spinSound");
+      const winSound = document.getElementById("winSound");
+
+      function drawWheel() {
+        const total = segments.length;
+        const arc = (Math.PI * 2) / total;
+
+        ctx.clearRect(0, 0, size, size);
+
+        for (let i = 0; i < total; i++) {
+          const start = currentAngle + i * arc;
+          const end = start + arc;
+
+          ctx.beginPath();
+          ctx.moveTo(center, center);
+          ctx.arc(center, center, center - 10, start, end);
+          ctx.closePath();
+          ctx.fillStyle = colors[i % colors.length];
+          ctx.fill();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.save();
+          ctx.translate(center, center);
+          ctx.rotate(start + arc / 2);
+          ctx.textAlign = "right";
+          ctx.font = "bold 18px Arial";
+          ctx.fillStyle = "#ffffff";
+          ctx.fillText(segments[i], center - 30, 6);
+          ctx.restore();
+        }
+      }
+      drawWheel();
+
+      /* TIMER IDLE DI WHEEL */
+      function startIdleTimer() {
+        clearIdleTimer();
+        idleTimer = setTimeout(() => {
+          goBackToQuiz(true);
+        }, IDLE_TIMEOUT);
+      }
+      function clearIdleTimer() {
+        if (idleTimer) {
+          clearTimeout(idleTimer);
+          idleTimer = null;
+        }
+      }
+      function enableSpin() {
+        spinButton.disabled = false;
+        spinButton.classList.add("spin-btn-enabled");
+        startIdleTimer();
+      }
+
+      /* KEMBALI KE KUIS */
+      function goBackToQuiz(fromTimer = false) {
+        wheelSection.style.display = "none";
+        quizCard.style.display = "block";
+        resultText.textContent = "";
+        clearIdleTimer();
+        if (fromTimer) {
+          statusText.textContent = "Waktu pada Wheel habis, kembali ke kuis.";
+        }
+      }
+      backToQuizBtn.onclick = () => goBackToQuiz(false);
+
+      /* SPIN 8 DETIK */
+      spinButton.onclick = () => {
+        if (isSpinning) return;
+        isSpinning = true;
+
+        startIdleTimer();
+
+        try {
+          spinSound.currentTime = 0;
+          spinSound.play();
+        } catch (e) {}
+
+        const startAngle = currentAngle;
+        const extraRot = Math.PI * 2 * (3 + Math.random() * 2);
+        const finalAngle = startAngle + extraRot;
+        const startTime = performance.now();
+
+        function animate(now) {
+          const progress = Math.min((now - startTime) / SPIN_DURATION, 1);
+          const ease = 1 - Math.pow(1 - progress, 3);
+          currentAngle = startAngle + (finalAngle - startAngle) * ease;
+          drawWheel();
+
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            isSpinning = false;
+            try {
+              spinSound.pause();
+              spinSound.currentTime = 0;
+            } catch (e) {}
+            normalizeAngle();
+            showResult();
+          }
+        }
+        requestAnimationFrame(animate);
+      };
+
+      function normalizeAngle() {
+        currentAngle = currentAngle % (2 * Math.PI);
+        if (currentAngle < 0) currentAngle += 2 * Math.PI;
+      }
+
+      function showResult() {
+        const total = segments.length;
+        const arc = (Math.PI * 2) / total;
+
+        const pointerAngle = -Math.PI / 2;
+        let theta = (pointerAngle - currentAngle) % (2 * Math.PI);
+        if (theta < 0) theta += 2 * Math.PI;
+
+        let index = Math.floor(theta / arc);
+        if (index >= total) index = total - 1;
+        if (index < 0) index = 0;
+
+        const hadiah = segments[index];
+        resultText.textContent = "Selamat! Anda dapat: " + hadiah;
+
+        try {
+          winSound.currentTime = 0;
+          winSound.play();
+        } catch (e) {}
+      }
+    </script>
+  </body>
+</html>
