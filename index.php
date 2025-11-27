@@ -3,9 +3,9 @@
 // KONEKSI DATABASE
 // =====================
 $host = 'localhost';        // ganti sesuai settingmu
-$db   = 'quiz';    // ganti nama DB
-$user = 'root';        // ganti user
-$pass = '';         // ganti password
+$db   = 'quiz';             // ganti nama DB
+$user = 'root';             // ganti user
+$pass = '';                 // ganti password
 
 $dsn  = "mysql:host=$host;dbname=$db;charset=utf8mb4";
 
@@ -23,8 +23,13 @@ try {
 // =====================
 // AMBIL CONFIG KUIS
 // =====================
+// pastikan di tabel quiz_config ada kolom: difficulty (1 = biasa, 2 = sulit)
 $stmt = $pdo->query("
-    SELECT point_per_question, passing_score, quiz_duration, idle_limit
+    SELECT point_per_question,
+           passing_score,
+           quiz_duration,
+           idle_limit,
+           difficulty
     FROM quiz_config
     WHERE is_active = 1
     LIMIT 1
@@ -38,18 +43,26 @@ if (!$config) {
         'passing_score'      => 80,
         'quiz_duration'      => 60,
         'idle_limit'         => 60,
+        'difficulty'         => 1, // default: biasa
     ];
 }
 
+// normalisasi difficulty dari config
+$difficultyConfig = isset($config['difficulty']) ? (int)$config['difficulty'] : 1;
+// kalau ada nilai aneh, fallback ke 1 (biasa)
+if ($difficultyConfig !== 1 && $difficultyConfig !== 2) {
+    $difficultyConfig = 1;
+}
+
 // jumlah soal yang akan ditampilkan
-$totalQuestions = 10; // bisa kamu ubah nanti, cukup ubah angka ini saja
-$maxScore       = $totalQuestions * (int)$config['point_per_question'];
+$totalQuestions  = 10; // bisa kamu ubah nanti, cukup ubah angka ini saja
+$maxScore        = $totalQuestions * (int)$config['point_per_question'];
 $durationSeconds = (int)$config['quiz_duration'];
 $passingScore    = (int)$config['passing_score'];
 
 // label waktu untuk ditampilkan di teks
 if ($durationSeconds % 60 === 0) {
-    $minutes = $durationSeconds / 60;
+    $minutes       = $durationSeconds / 60;
     $durationLabel = $minutes . ' menit';
 } else {
     $durationLabel = $durationSeconds . ' detik';
@@ -58,32 +71,59 @@ if ($durationSeconds % 60 === 0) {
 // =====================
 // AMBIL BANK SOAL AKTIF
 // =====================
-$stmt = $pdo->query("
-    SELECT id, question_text, option_a, option_b, option_c, option_d,
-           correct_option, difficulty
-    FROM quiz_questions
-    WHERE is_active = 1
-");
+// kalau mau STRICT: hanya ambil soal dengan difficulty sesuai config
+// 1 = biasa, 2 = sulit
+if ($difficultyConfig === 1 || $difficultyConfig === 2) {
+    $stmt = $pdo->prepare("
+        SELECT id,
+               question_text,
+               option_a,
+               option_b,
+               option_c,
+               option_d,
+               correct_option,
+               difficulty
+        FROM quiz_questions
+        WHERE is_active = 1
+          AND difficulty = :difficulty
+    ");
+    $stmt->execute([':difficulty' => $difficultyConfig]);
+} else {
+    // fallback: kalau difficultyConfig aneh, ambil semua soal aktif
+    $stmt = $pdo->query("
+        SELECT id,
+               question_text,
+               option_a,
+               option_b,
+               option_c,
+               option_d,
+               correct_option,
+               difficulty
+        FROM quiz_questions
+        WHERE is_active = 1
+    ");
+}
 
 $rows = $stmt->fetchAll();
 
-$optionMap = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3];
+$optionMap    = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3];
 $questionBank = [];
 
 foreach ($rows as $r) {
     $questionBank[] = [
-        'text'        => $r['question_text'],
-        'options'     => [
+        'text'         => $r['question_text'],
+        'options'      => [
             $r['option_a'],
             $r['option_b'],
             $r['option_c'],
             $r['option_d'],
         ],
         'correctIndex' => $optionMap[$r['correct_option']] ?? 0,
-        'difficulty'  => (int)$r['difficulty'], // 1 = biasa, 2 = sulit
+        'difficulty'   => (int)$r['difficulty'], // 1 = biasa, 2 = sulit
     ];
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 
@@ -109,426 +149,495 @@ foreach ($rows as $r) {
         // Bank soal dari database
         const QUESTION_BANK = <?= json_encode($questionBank, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     </script>
-
     <style>
-        /* ======================
-         GLOBAL
-      ====================== */
+        /* ======================= GLOBAL ======================= */
         * {
             box-sizing: border-box;
-            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-                "Segoe UI", Arial, sans-serif;
+            font-family: "Inter", system-ui, sans-serif;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            /* biar horizontal nggak ada scroll */
+            overflow-y: auto;
+            /* vertikal boleh scroll */
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #ffffff;
-            color: #0c4a6e;
+            /* background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            color: #0c4a6e; */
         }
 
         .page-wrapper {
             width: 100%;
             max-width: 1100px;
-            padding: 16px;
             margin: 0 auto;
+            padding: 12px 12px 24px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* ======================
-         HEADER LOGO & TITLE
-      ====================== */
+        /* ======================= HEADER & TITLE ======================= */
         .header-container {
-            margin-bottom: 20px;
+            flex-shrink: 0;
+            padding: 12px 16px 8px;
         }
 
-        .header-photo {
-            max-width: 100%;
+        .header-photos {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 12px;
         }
 
         .header-photo img {
-            display: block;
             width: 100%;
+            max-width: 240px;
             height: auto;
             object-fit: contain;
             filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
         }
 
         .header-logo img {
-            max-width: 100%;
-            max-height: 140px;
-            width: auto;
+            width: 100%;
+            max-width: 100px;
             height: auto;
+            object-fit: contain;
             filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-        }
-
-        /* Foto Bupati & Camat (lebih besar, beda ukuran) */
-        .photo-bupati img {
-            max-width: 360px;
-            margin-inline: auto;
-        }
-
-        .photo-camat img {
-            max-width: 360px;
-            margin-inline: auto;
-        }
-
-        @media (max-width: 992px) {
-            .photo-bupati img {
-                max-width: 220px;
-            }
-
-            .photo-camat img {
-                max-width: 180px;
-            }
-
-            .header-logo img {
-                max-height: 130px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header-logo img {
-                max-height: 120px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .page-wrapper {
-                padding: 12px;
-            }
-
-            .header-logo img {
-                max-height: 100px;
-            }
         }
 
         .title-block {
             text-align: center;
-            margin-bottom: 16px;
         }
 
         .title-block h1 {
-            margin: 0 0 8px 0;
-            font-size: 1.6rem;
+            margin: 0 0 4px;
+            font-size: 1.3rem;
             font-weight: 800;
-            color: #0c4a6e;
-            text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+            line-height: 1.2;
         }
 
         .title-block .subtitle {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             color: #075985;
             font-style: italic;
         }
 
-        @media (max-width: 640px) {
-            .title-block h1 {
-                font-size: 1.4rem;
+        /* ======================= TIMER ======================= */
+        .timer-wrapper {
+            position: sticky;
+            /* selalu nempel di atas saat scroll */
+            top: 0;
+            z-index: 20;
+            text-align: center;
+            padding: 8px 0;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .timer-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            border: 2px solid #0ea5e9;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .timer-badge.timer-warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
             }
 
-            .title-block .subtitle {
-                font-size: 0.85rem;
+            50% {
+                transform: scale(1.05);
             }
         }
 
-        /* ======================
-         GLASS CARD
-      ====================== */
+        #timerText {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0c4a6e;
+        }
+
+        /* ======================= CONTENT AREA ======================= */
+        .content-wrapper {
+            flex: 1;
+            padding: 16px 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* ======================= GLASS CARD ======================= */
         .glass {
             background: rgba(255, 255, 255, 0.95);
             border: 2px solid rgba(14, 165, 233, 0.2);
-            border-radius: 24px;
-            padding: 24px;
-            box-shadow: 0 20px 60px rgba(14, 165, 233, 0.15);
-            backdrop-filter: blur(12px);
-            position: relative;
-            transition: all 0.3s ease;
-            max-width: 100%;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 18px 40px rgba(14, 165, 233, 0.15);
+            width: 100%;
+            max-width: 900px;
         }
 
-        .glass:hover {
-            box-shadow: 0 25px 70px rgba(14, 165, 233, 0.25);
-            transform: translateY(-2px);
-        }
-
-        @media (max-width: 640px) {
-            .glass {
-                padding: 16px;
-                border-radius: 18px;
-            }
-        }
-
-        /* ======================
-         START CARD
-      ====================== */
-        #startCard {
-            margin-bottom: 18px;
-        }
-
-        .start-title {
+        /* ======================= START PAGE ======================= */
+        #startCard .start-title {
             font-size: 1.1rem;
             font-weight: 700;
             margin-bottom: 8px;
             color: #0c4a6e;
         }
 
-        .start-text {
+        #startCard .start-text {
             font-size: 0.9rem;
-            color: #0f172a;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
+            line-height: 1.5;
         }
 
-        .start-rules {
+        #startCard .start-rules {
             font-size: 0.85rem;
-            color: #0369a1;
-            margin-bottom: 14px;
+            line-height: 1.6;
         }
 
-        .start-rules ul {
-            padding-left: 18px;
-            margin: 6px 0 0 0;
+        #startCard .start-rules ul {
+            margin: 8px 0;
+            padding-left: 20px;
         }
 
-        .start-rules li {
-            margin-bottom: 4px;
+        #startCard .start-rules li {
+            margin-bottom: 6px;
         }
 
-        @media (max-width: 640px) {
-            .start-title {
-                font-size: 1rem;
-            }
-
-            .start-text,
-            .start-rules {
-                font-size: 0.85rem;
-            }
-        }
-
-        /* ======================
-         TIMER BESAR
-      ====================== */
-        .timer-wrapper {
-            margin: 0 0 10px 0;
-            text-align: center;
-            display: none;
-            /* hanya muncul saat kuis berjalan */
-        }
-
-        .timer-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 10px 24px;
-            border-radius: 999px;
-            font-size: 1rem;
-            font-weight: 600;
-            background: #e0f2fe;
-            color: #0c4a6e;
-            border: 1px solid #bae6fd;
-        }
-
-        .timer-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        #timerText {
-            font-variant-numeric: tabular-nums;
-            font-size: 1.5rem;
-            font-weight: 800;
-        }
-
-        .timer-warning {
-            background: #fee2e2;
-            border-color: #fecaca;
-            color: #b91c1c;
-        }
-
-        @media (max-width: 480px) {
-            .timer-badge {
-                width: 100%;
-                padding-inline: 12px;
-                font-size: 0.9rem;
-            }
-
-            #timerText {
-                font-size: 1.3rem;
-            }
-        }
-
-        /* ======================
-         QUIZ
-      ====================== */
+        /* ======================= QUIZ CARD ======================= */
         #quizCard {
-            margin-bottom: 18px;
             display: none;
-            max-height: 60vh;
-            /* agar 1 layar */
-            overflow-y: auto;
-            /* scrollable */
         }
 
+        /* ======================= QUIZ HEADER ======================= */
         .quiz-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             flex-wrap: wrap;
         }
 
         .score-info {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #0c4a6e;
-            background: rgba(224, 242, 254, 0.5);
-            padding: 8px 16px;
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            background: #e0f2fe;
             border-radius: 999px;
-            border: 2px solid #bae6fd;
+            border: 2px solid #0ea5e9;
+            font-weight: 600;
         }
 
         .btn-outline {
-            background: transparent;
             border: 2px solid #0ea5e9;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            background: transparent;
             color: #0e7490;
-            box-shadow: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
         .btn-outline:hover {
             background: #0ea5e9;
-            color: white;
+            color: #ffffff;
+            transform: translateY(-2px);
         }
 
+        /* ======================= QUESTION ======================= */
         .question {
-            background: rgba(240, 249, 255, 0.6);
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin-bottom: 12px;
-            border: 2px solid rgba(186, 230, 253, 0.8);
-            transition: all 0.3s ease;
-        }
-
-        .question:hover {
-            background: rgba(224, 242, 254, 0.8);
-            border-color: #7dd3fc;
+            padding: 16px;
+            background: rgba(240, 249, 255, 0.8);
+            border-radius: 12px;
+            border: 2px solid rgba(14, 165, 233, 0.3);
+            margin-bottom: 16px;
         }
 
         .question-text {
             font-size: 0.95rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #0c4a6e;
+            line-height: 1.5;
+        }
+
+        .options label {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.85rem;
             margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            border: 2px solid transparent;
+        }
+
+        .options label:hover {
+            background: #f0f9ff;
+            border-color: #0ea5e9;
+        }
+
+        .options input[type="radio"] {
+            margin-top: 2px;
+            flex-shrink: 0;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .options input[type="radio"]:checked+span {
             font-weight: 600;
             color: #0c4a6e;
         }
 
-        .options label {
-            display: block;
-            font-size: 0.88rem;
-            margin-bottom: 5px;
-            cursor: pointer;
-            color: #0e7490;
-            transition: color 0.2s;
-        }
-
-        .options label:hover {
-            color: #0369a1;
-        }
-
-        .options input[type="radio"] {
-            margin-right: 6px;
-            accent-color: #0ea5e9;
-        }
-
+        /* ======================= BUTTON & STATUS ======================= */
         .quiz-actions {
             margin-top: 16px;
             display: flex;
-            align-items: center;
-            flex-wrap: wrap;
+            justify-content: space-between;
             gap: 12px;
-            font-size: 0.9rem;
         }
 
         button {
-            cursor: pointer;
-            border: 0;
+            padding: 10px 20px;
+            font-size: 0.9rem;
             border-radius: 999px;
-            padding: 10px 24px;
-            font-size: 0.95rem;
-            font-weight: 700;
             background: linear-gradient(90deg, #0ea5e9, #0284c7);
+            border: none;
             color: white;
-            box-shadow: 0 4px 16px rgba(14, 165, 233, 0.4);
+            cursor: pointer;
+            font-weight: 600;
             transition: all 0.3s ease;
-            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.6);
-        }
-
-        button:active {
-            transform: scale(0.97);
+            box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
         }
 
         button:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
+            background: #cbd5e1;
             box-shadow: none;
-            transform: none;
         }
 
         #statusText {
             margin-top: 12px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #0369a1;
-            padding: 10px;
-            background: rgba(240, 249, 255, 0.7);
-            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            background: rgba(240, 249, 255, 0.9);
             border-left: 4px solid #0ea5e9;
+            border-radius: 8px;
+            line-height: 1.5;
         }
 
-        @media (max-width: 640px) {
+        /* ======================= QUIZ MODE ======================= */
+        /* Saat quiz-mode: header hilang, timer muncul */
+        body.quiz-mode .header-container {
+            display: none;
+        }
+
+        body.quiz-mode .timer-wrapper {
+            display: block !important;
+        }
+
+        /* ======================= RESPONSIVE ======================= */
+        /* Tablet Landscape */
+        @media (max-width: 1024px) and (orientation: landscape) {
+            .header-photos {
+                gap: 100px;
+            }
+
+            .header-photo img {
+                /*max-width: 100px;*/
+            }
+
+            .header-logo img {
+                max-width: 140px;
+            }
+
+            .title-block h1 {
+                font-size: 1.1rem;
+            }
+
+            .title-block .subtitle {
+                font-size: 0.75rem;
+            }
+
+            .glass {
+                padding: 16px;
+            }
+        }
+
+        /* Mobile Portrait */
+        @media (max-width: 768px) and (orientation: portrait) {
+            .header-container {
+                padding: 10px 12px 6px;
+            }
+
+            .header-photos {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .header-photo img,
+            .header-logo img {
+                /*max-width: 120px;*/
+            }
+
+            .title-block h1 {
+                font-size: 1rem;
+            }
+
+            .title-block .subtitle {
+                font-size: 0.75rem;
+            }
+
+            .content-wrapper {
+                padding: 12px 0;
+            }
+
+            .glass {
+                padding: 16px;
+            }
+
             .quiz-header {
                 flex-direction: column;
                 align-items: stretch;
             }
 
             .score-info {
-                width: 100%;
                 text-align: center;
             }
 
             .quiz-actions {
                 flex-direction: column;
-                align-items: stretch;
             }
 
             button {
                 width: 100%;
-                text-align: center;
-            }
-
-            .question-text {
-                font-size: 0.9rem;
-            }
-
-            .options label {
-                font-size: 0.85rem;
             }
         }
 
-        /* HP: kalau mau pakai CSS tambahan, bupati & camat tetap disembunyikan */
-        @media (max-width: 767.98px) {
+        /* Small Mobile */
+        @media (max-width: 480px) {
+            .header-container {
+                padding: 8px 10px 4px;
+            }
 
-            .header-photo.photo-bupati,
-            .header-photo.photo-camat {
-                display: none !important;
+            .title-block h1 {
+                font-size: 0.9rem;
+            }
+
+            .title-block .subtitle {
+                font-size: 0.7rem;
+            }
+
+            .glass {
+                padding: 14px;
+                border-radius: 16px;
+            }
+
+            .question {
+                padding: 12px;
+            }
+
+            .question-text {
+                font-size: 0.85rem;
+            }
+
+            .options label {
+                font-size: 0.8rem;
+                padding: 8px;
+            }
+        }
+
+        /* Landscape khusus untuk tablet / layar pendek */
+        @media (max-height: 600px) and (orientation: landscape) {
+            .header-container {
+                padding: 6px 12px 4px;
+            }
+
+            .header-photos {
+                margin-bottom: 6px;
+            }
+
+            .header-photo img {
+                /*max-width: 80px;*/
+            }
+
+            .header-logo img {
+                max-width: 100px;
+            }
+
+            .title-block h1 {
+                font-size: 0.95rem;
+                margin-bottom: 2px;
+            }
+
+            .title-block .subtitle {
+                font-size: 0.7rem;
+            }
+
+            .content-wrapper {
+                padding: 8px 0;
+            }
+
+            .glass {
+                padding: 12px;
+            }
+
+            .question {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            button {
+                padding: 6px 14px;
+                font-size: 0.8rem;
+            }
+        }
+
+
+        /* Sembunyikan foto Bupati & Camat saat HP portrait */
+        @media (orientation: portrait) {
+            .header-photo {
+                display: none;
+            }
+
+            .header-photos {
+                gap: 0;
+                /* karena cuma logo, gap tidak perlu besar */
+                margin-bottom: 8px;
+            }
+
+            .header-logo img {
+                max-width: 120px;
+                /* boleh dibesarkan sedikit kalau mau */
             }
         }
     </style>
@@ -536,77 +645,29 @@ foreach ($rows as $r) {
 
 <body>
     <div class="page-wrapper">
-        <!-- HEADER: FOTO BUPATI - LOGO - FOTO CAMAT (Bootstrap grid) -->
-        <div
-            class="header-container row justify-content-center align-items-center text-center g-3">
-            <!-- Bupati: hanya tampil di md ke atas -->
-            <div class="col-md-4 header-photo photo-bupati d-none d-md-block">
-                <img src="wkdh.png" alt="Bupati" />
+        <!-- HEADER (akan di-hide saat quiz-mode) -->
+        <div class="header-container">
+            <div class="header-photos">
+                <div class="header-photo">
+                    <img src="wkdh.png" alt="Bupati" />
+                </div>
+                <div class="header-logo">
+                    <img src="logo.png" alt="Logo Hari Jadi Tanah Laut" />
+                </div>
+                <div class="header-photo">
+                    <img src="camat.png" alt="Camat Pelaihari" />
+                </div>
             </div>
 
-            <!-- Logo: selalu tampil, di HP jadi full width -->
-            <div class="col-12 col-md-4 header-logo">
-                <img src="logo.png" alt="Logo Hari Jadi Tanah Laut" />
-            </div>
-
-            <!-- Camat: hanya tampil di md ke atas -->
-            <div class="col-md-4 header-photo photo-camat d-none d-md-block">
-                <img src="camat.png" alt="Camat Pelaihari" />
-            </div>
-        </div>
-
-        <div class="title-block">
-            <h1>Kuis Hari Jadi Kabupaten Tanah Laut ke-60</h1>
-            <div class="subtitle">
-                "Bagawi Sabarataan Tanah Laut, Simpun Bakamajuan"
+            <div class="title-block">
+                <h1>Kuis Hari Jadi Kabupaten Tanah Laut ke-60</h1>
+                <div class="subtitle">
+                    "Bagawi Sabarataan Tanah Laut, Simpun Bakamajuan"
+                </div>
             </div>
         </div>
 
-        <!-- AUDIO -->
-        <audio id="startSound" src="start.mp3"></audio>
-        <audio id="tickSound" src="tick.mp3" loop></audio>
-        <audio id="warningSound" src="warning.mp3"></audio>
-        <audio id="timeUpSound" src="timeup.mp3"></audio>
-        <audio id="winSound" src="win.mp3"></audio>
-
-        <!-- KARTU MULAI -->
-        <div id="startCard" class="glass">
-            <div class="start-title">Selamat Datang di Kuis Harjad Tanah Laut</div>
-            <div class="start-text">
-                Jawab pertanyaan seputar Kabupaten Tanah Laut dan Hari Jadi ke-60.
-                Waktu mengerjakan <strong><?= htmlspecialchars($durationLabel, ENT_QUOTES, 'UTF-8'); ?></strong>. Siap-siap ya! 😄
-            </div>
-            <div class="start-rules">
-                Aturan singkat:
-                <ul>
-                    <li>Tekan tombol <strong>Mulai Kuis</strong> untuk mulai main.</li>
-                    <li>
-                        Waktu ngerjain cuma
-                        <strong><?= htmlspecialchars($durationLabel, ENT_QUOTES, 'UTF-8'); ?></strong>,
-                        jadi langsung gas aja.
-                    </li>
-                    <li>
-                        Nilai maksimal <strong><?= (int)$maxScore; ?></strong>, tiap
-                        jawaban benar dapat <?= (int)$config['point_per_question']; ?> poin.
-                    </li>
-                    <li>
-                        Kalau nilaimu <strong><?= (int)$maxScore; ?></strong>, langsung
-                        dapat hadiah. Mantap!
-                    </li>
-                    <li>
-                        Kalau nilai kamu <strong>di atas <?= (int)$passingScore; ?></strong>,
-                        lanjut ke game dart buat dapat hadiah tambahan.
-                    </li>
-                    <li>
-                        Kalau nilainya <strong>di bawah <?= (int)$passingScore; ?></strong>,
-                        sayang banget… kamu gagal. Tapi tenang, bisa coba lagi kok.
-                    </li>
-                </ul>
-            </div>
-            <button id="startBtn">Mulai Kuis</button>
-        </div>
-
-        <!-- TIMER BESAR (DI ATAS CARD SOAL) -->
+        <!-- TIMER -->
         <div id="timerWrapper" class="timer-wrapper">
             <div class="timer-badge" id="timerBadge">
                 <span class="timer-label">⏱️ Sisa waktu:</span>
@@ -614,32 +675,83 @@ foreach ($rows as $r) {
             </div>
         </div>
 
-        <!-- KARTU KUIS (SCROLLABLE) -->
-        <div id="quizCard" class="glass">
-            <div class="quiz-header">
-                <div class="score-info">
-                    Nilai: <span id="scoreValue">0</span> /
-                    <span id="maxScoreValue">0</span>
+        <!-- CONTENT AREA -->
+        <div class="content-wrapper">
+            <!-- AUDIO -->
+            <audio id="startSound" src="start.mp3"></audio>
+            <audio id="tickSound" src="tick.mp3" loop></audio>
+            <audio id="warningSound" src="warning.mp3"></audio>
+            <audio id="timeUpSound" src="timeup.mp3"></audio>
+            <audio id="winSound" src="win.mp3"></audio>
+
+            <!-- START CARD -->
+            <div id="startCard" class="glass">
+                <div class="start-title">Selamat Datang di Kuis Harjad Tanah Laut</div>
+                <div class="start-text">
+                    Jawab pertanyaan seputar Kabupaten Tanah Laut dan Hari Jadi ke-60.
+                    Waktu mengerjakan <strong><?= htmlspecialchars($durationLabel, ENT_QUOTES, 'UTF-8'); ?></strong>. Siap-siap ya! 😄
                 </div>
-                <button id="backToStartBtn" type="button" class="btn-outline">
-                    Kembali ke Menu Awal
-                </button>
+                <div class="start-rules">
+                    Aturan singkat:
+                    <ul>
+                        <li>Tekan tombol <strong>Mulai Kuis</strong> untuk mulai main.</li>
+                        <li>
+                            Waktu ngerjain cuma
+                            <strong><?= htmlspecialchars($durationLabel, ENT_QUOTES, 'UTF-8'); ?></strong>,
+                            jadi langsung gas aja.
+                        </li>
+                        <li>
+                            Nilai maksimal <strong><?= (int)$maxScore; ?></strong>, tiap
+                            jawaban benar dapat <?= (int)$config['point_per_question']; ?> poin.
+                        </li>
+                        <li>
+                            Kalau nilaimu <strong><?= (int)$maxScore; ?></strong>, langsung
+                            dapat hadiah. Mantap!
+                        </li>
+                        <li>
+                            Kalau nilai kamu <strong>di atas <?= (int)$passingScore; ?></strong>,
+                            lanjut ke game dart buat dapat hadiah tambahan.
+                        </li>
+                        <li>
+                            Kalau nilainya <strong>di bawah <?= (int)$passingScore; ?></strong>,
+
+                            sayang banget… kamu gagal. Tapi tenang, bisa coba lagi kok.
+                        </li>
+                    </ul>
+                </div>
+                <button id="startBtn">Mulai Kuis</button>
             </div>
 
-            <div id="quizContainer"></div>
+            <!-- KUIS: 1 SOAL PER HALAMAN -->
+            <div id="quizCard" class="glass">
+                <div class="quiz-header">
+                    <div class="score-info">
+                        Nilai: <span id="scoreValue">0</span> /
+                        <span id="maxScoreValue">0</span>
+                    </div>
+                    <button id="backToStartBtn" type="button" class="btn-outline">
+                        Kembali ke Menu Awal
+                    </button>
+                </div>
 
-            <div class="quiz-actions">
-                <button id="submitBtn">Kumpulkan Jawaban</button>
+                <div id="quizContainer"></div>
+                <div id="statusText"></div>
+                <div class="quiz-actions">
+                    <button id="prevBtn" type="button" class="btn-outline">
+                        Pertanyaan Sebelumnya
+                    </button>
+                    <button id="nextBtn" type="button">
+                        Pertanyaan Selanjutnya
+                    </button>
+                </div>
             </div>
-            <div id="statusText"></div>
         </div>
     </div>
 
     <script>
-        /* ===========================
-         BANK SOAL (DARI DB) -> acak TOTAL_QUESTIONS
-      =========================== */
-
+        // ===========================
+        // BANK SOAL -> acak TOTAL_QUESTIONS
+        // ===========================
         function shuffle(arr) {
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -657,45 +769,22 @@ foreach ($rows as $r) {
 
         document.getElementById("maxScoreValue").textContent = MAX_SCORE;
 
-        /* ===========================
-           RENDER SOAL
-        =========================== */
+        // ===========================
+        // ELEMENT & STATE
+        // ===========================
         const quizContainer = document.getElementById("quizContainer");
 
-        QUESTIONS.forEach((q, i) => {
-            const box = document.createElement("div");
-            box.className = "question";
-            box.innerHTML = `
-          <div class="question-text">${i + 1}. ${q.text}</div>
-          <div class="options">
-              ${q.options
-                .map(
-                  (opt, idx) => `
-                  <label>
-                      <input type="radio" name="q${i}" value="${idx}">
-                      ${opt}
-                  </label>
-              `
-                )
-                .join("")}
-          </div>
-        `;
-            quizContainer.appendChild(box);
-        });
-
-        /* ===========================
-           ELEMENT & STATE
-        =========================== */
         const startCard = document.getElementById("startCard");
         const startBtn = document.getElementById("startBtn");
         const quizCard = document.getElementById("quizCard");
         const statusText = document.getElementById("statusText");
         const scoreValueEl = document.getElementById("scoreValue");
-        const submitBtn = document.getElementById("submitBtn");
         const timerTextEl = document.getElementById("timerText");
         const timerBadge = document.getElementById("timerBadge");
         const timerWrapper = document.getElementById("timerWrapper");
         const backToStartBtn = document.getElementById("backToStartBtn");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
 
         const startSound = document.getElementById("startSound");
         const tickSound = document.getElementById("tickSound");
@@ -710,9 +799,13 @@ foreach ($rows as $r) {
 
         let idleTimer = null;
 
-        /* ===========================
-           TIMER
-        =========================== */
+        // state soal per halaman
+        let currentQuestionIndex = 0;
+        let answers = new Array(QUESTIONS.length).fill(null);
+
+        // ===========================
+        // TIMER
+        // ===========================
         function formatTime(seconds) {
             const m = Math.floor(seconds / 60);
             const s = seconds % 60;
@@ -773,9 +866,9 @@ foreach ($rows as $r) {
             }, 1000);
         }
 
-        /* ===========================
-           IDLE TIMER (DI LUAR COUNTDOWN)
-        =========================== */
+        // ===========================
+        // IDLE TIMER
+        // ===========================
         function clearIdleTimer() {
             if (idleTimer) {
                 clearTimeout(idleTimer);
@@ -785,23 +878,76 @@ foreach ($rows as $r) {
 
         function resetIdleTimer() {
             clearIdleTimer();
-            // hanya aktif kalau kuis sedang tampil
-            if (quizCard.style.display === "block") {
+            if (quizCard.style.display !== "none") {
                 idleTimer = setTimeout(() => {
-                    // idle -> kembali ke menu awal
                     backToStart();
                 }, IDLE_LIMIT);
             }
         }
 
-        /* ===========================
-           LOGIKA KUIS
-        =========================== */
+        // ===========================
+        // RENDER 1 SOAL
+        // ===========================
+        function renderQuestion(index) {
+            const q = QUESTIONS[index];
+            if (!q) return;
+
+            const storedAnswer = answers[index];
+
+            quizContainer.innerHTML = `
+                <div class="question">
+                    <div class="question-text">
+                        ${index + 1}. ${q.text}
+                    </div>
+                    <div class="options">
+                        ${q.options.map((opt, idx) => `
+                            <label>
+                                <input type="radio"
+                                       name="q${index}"
+                                       value="${idx}"
+                                       ${storedAnswer === idx ? "checked" : ""}>
+                                <span>${opt}</span>
+                            </label>
+                        `).join("")}
+                    </div>
+                </div>
+            `;
+
+            const radios = quizContainer.querySelectorAll('input[name="q' + index + '"]');
+
+            radios.forEach(r => {
+                r.addEventListener("change", (e) => {
+                    answers[index] = parseInt(e.target.value, 10);
+                    updateNavButtons();
+                });
+            });
+
+            updateNavButtons();
+        }
+
+        function updateNavButtons() {
+            prevBtn.disabled = (currentQuestionIndex === 0);
+
+            const currentAnswer = answers[currentQuestionIndex];
+            const alreadyAnswered = (currentAnswer !== null && currentAnswer !== undefined);
+
+            if (currentQuestionIndex === QUESTIONS.length - 1) {
+                nextBtn.textContent = "Kumpulkan Jawaban";
+            } else {
+                nextBtn.textContent = "Pertanyaan Selanjutnya";
+            }
+
+            nextBtn.disabled = !alreadyAnswered || quizFinished;
+        }
+
+        // ===========================
+        // LOGIKA FINISH
+        // ===========================
         function disableQuizInputs() {
             const radios = quizContainer.querySelectorAll('input[type="radio"]');
             radios.forEach((r) => (r.disabled = true));
-            submitBtn.disabled = true;
-            submitBtn.textContent = "Selesai";
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
         }
 
         function finishQuiz(fromTimer = false) {
@@ -810,17 +956,16 @@ foreach ($rows as $r) {
             let score = 0;
             let answered = 0;
 
-            QUESTIONS.forEach((q, i) => {
-                const sel = document.querySelector(`input[name="q${i}"]:checked`);
-                if (sel) {
+            for (let i = 0; i < QUESTIONS.length; i++) {
+                const ans = answers[i];
+                if (ans !== null && ans !== undefined) {
                     answered++;
-                    if (parseInt(sel.value, 10) === q.correctIndex) {
+                    if (ans === QUESTIONS[i].correctIndex) {
                         score += POINT_PER_QUESTION;
                     }
                 }
-            });
+            }
 
-            // Jika manual submit dan belum semua terjawab, minta lengkapi dulu
             if (!fromTimer && answered < QUESTIONS.length) {
                 statusText.textContent =
                     "Jawab semua soal dulu. Terjawab: " +
@@ -860,15 +1005,43 @@ foreach ($rows as $r) {
             disableQuizInputs();
         }
 
-        submitBtn.addEventListener("click", () => {
-            finishQuiz(false);
-            resetIdleTimer();
+        // ===========================
+        // NAVIGASI (KEMBALI / LANJUT)
+        // ===========================
+        prevBtn.addEventListener("click", () => {
+            if (currentQuestionIndex > 0 && !quizFinished) {
+                currentQuestionIndex--;
+                renderQuestion(currentQuestionIndex);
+                resetIdleTimer();
+            }
         });
 
-        /* ===========================
-           KEMBALI KE MENU AWAL
-        =========================== */
+        nextBtn.addEventListener("click", () => {
+            if (quizFinished) return;
+
+            const currentAnswer = answers[currentQuestionIndex];
+            if (currentAnswer === null || currentAnswer === undefined) {
+                statusText.textContent = "Silakan pilih jawaban dulu sebelum lanjut.";
+                return;
+            }
+
+            if (currentQuestionIndex < QUESTIONS.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion(currentQuestionIndex);
+                statusText.textContent = "";
+                resetIdleTimer();
+            } else {
+                finishQuiz(false);
+                resetIdleTimer();
+            }
+        });
+
+        // ===========================
+        // KEMBALI KE MENU AWAL
+        // ===========================
         function backToStart() {
+            document.body.classList.remove("quiz-mode");
+
             stopTimerAndSound();
             clearIdleTimer();
 
@@ -877,17 +1050,11 @@ foreach ($rows as $r) {
             updateTimerDisplay();
             timerBadge.classList.remove("timer-warning");
 
-            // reset pilihan & tombol
-            const radios = quizContainer.querySelectorAll('input[type="radio"]');
-            radios.forEach((r) => {
-                r.checked = false;
-                r.disabled = false;
-            });
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Kumpulkan Jawaban";
+            answers = new Array(QUESTIONS.length).fill(null);
+            currentQuestionIndex = 0;
+            quizContainer.innerHTML = "";
             statusText.textContent = "";
 
-            // tampilkan start, sembunyikan kuis & timer
             quizCard.style.display = "none";
             timerWrapper.style.display = "none";
             startCard.style.display = "block";
@@ -897,32 +1064,30 @@ foreach ($rows as $r) {
             backToStart();
         });
 
-        /* ===========================
-           START FLOW
-        =========================== */
+        // ===========================
+        // START FLOW
+        // ===========================
         function startQuiz() {
             if (QUESTIONS.length === 0) {
                 statusText.textContent = "Belum ada soal aktif. Hubungi petugas.";
                 return;
             }
 
+            document.body.classList.add("quiz-mode");
+
             quizFinished = false;
             scoreValueEl.textContent = "0";
             statusText.textContent = "";
 
-            const radios = quizContainer.querySelectorAll('input[type="radio"]');
-            radios.forEach((r) => {
-                r.checked = false;
-                r.disabled = false;
-            });
-
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Kumpulkan Jawaban";
+            answers = new Array(QUESTIONS.length).fill(null);
+            currentQuestionIndex = 0;
 
             startCard.style.display = "none";
             quizCard.style.display = "block";
             timerWrapper.style.display = "block";
             updateTimerDisplay();
+
+            renderQuestion(currentQuestionIndex);
 
             try {
                 startSound.currentTime = 0;
@@ -940,14 +1105,12 @@ foreach ($rows as $r) {
 
         startBtn.addEventListener("click", startQuiz);
 
-        // Event untuk reset idle timer (aktivitas user di area kuis)
         ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(
             (evt) => {
-                quizCard.addEventListener(evt, resetIdleTimer);
+                document.addEventListener(evt, resetIdleTimer);
             }
         );
 
-        // Set display awal timer (sebelum kuis dimulai)
         updateTimerDisplay();
     </script>
 </body>
