@@ -705,20 +705,22 @@ foreach ($rows as $r) {
                             jawaban benar dapat <?= (int)$config['point_per_question']; ?> poin.
                         </li>
                         <li>
-                            Kalau nilaimu <strong><?= (int)$maxScore; ?></strong>, langsung
-                            dapat hadiah. Mantap!
+                            Kalau nilaimu <strong><?= (int)$maxScore; ?></strong> (semua jawaban benar),
+                            kamu dapat <strong>MUG</strong> dan dicatat di
+                            <strong>daftar pembagian doorprize</strong>.
                         </li>
                         <li>
-                            Kalau nilai kamu <strong>di atas <?= (int)$passingScore; ?></strong>,
-                            lanjut ke game dart buat dapat hadiah tambahan.
+                            Kalau nilai kamu di rentang <strong>70 – 90</strong>, kamu
+                            <strong>berhak lanjut ke Dart Challenge</strong>.
                         </li>
                         <li>
-                            Kalau nilainya <strong>di bawah <?= (int)$passingScore; ?></strong>,
-
-                            sayang banget… kamu gagal. Tapi tenang, bisa coba lagi kok.
+                            Kalau nilainya <strong>di bawah 70</strong>, kamu
+                            <strong>zonk</strong> dan belum bisa lanjut ke Dart Challenge.
+                            Tapi tenang, bisa coba main lagi kalau masih ada kesempatan. 😉
                         </li>
                     </ul>
                 </div>
+
                 <button id="startBtn">Mulai Kuis</button>
             </div>
 
@@ -982,24 +984,43 @@ foreach ($rows as $r) {
 
             let message = "";
             if (fromTimer) {
-                message += "Waktu habis! ";
+                message += "⏳ Waktu habis! ";
             }
 
-            message += "Nilai " + score + ". ";
+            message += "Nilai kamu: " + score + ". ";
 
-            if (score >= PASSING_SCORE) {
+            // 🎯 Jika nilai 100
+            if (score === MAX_SCORE) {
                 try {
                     winSound.currentTime = 0;
                     winSound.play();
                 } catch (e) {}
-                message +=
-                    "Selamat! Terima kasih sudah mengikuti kuis Hari Jadi Tanah Laut.";
-            } else {
-                message +=
-                    "Belum mencapai " +
-                    PASSING_SCORE +
-                    ". Terima kasih sudah ikut bermain.";
+
+                message += `
+        🎉 Kamu berhasil menjawab SEMUA soal dengan benar!
+        🏆 Kamu mendapatkan *MUG* dan akan dicatat di *daftar pembagian doorprize*.
+    `;
             }
+            // 🎯 Jika 70–90
+            else if (score >= 70 && score < 100) {
+                try {
+                    winSound.currentTime = 0;
+                    winSound.play();
+                } catch (e) {}
+
+                message += `
+        🔥 Mantap! Kamu berhak lanjut ke *Dart Challenge*. 
+        Silakan lapor ke panitia untuk lanjut ke tahap berikutnya.
+    `;
+            }
+            // 🎯 Jika di bawah 70
+            else {
+                message += `
+        😢 Belum mencapai skor minimal. 
+        Tetap semangat! Kamu masih bisa mencoba lagi kalau masih ada kesempatan.
+    `;
+            }
+
 
             statusText.textContent = message;
             disableQuizInputs();
@@ -1040,24 +1061,28 @@ foreach ($rows as $r) {
         // KEMBALI KE MENU AWAL
         // ===========================
         function backToStart() {
-            document.body.classList.remove("quiz-mode");
+            // document.body.classList.remove("quiz-mode");
 
-            stopTimerAndSound();
-            clearIdleTimer();
+            // stopTimerAndSound();
+            // clearIdleTimer();
 
-            quizFinished = false;
-            timeLeft = QUIZ_DURATION;
-            updateTimerDisplay();
-            timerBadge.classList.remove("timer-warning");
+            // quizFinished = false;
+            // timeLeft = QUIZ_DURATION;
+            // updateTimerDisplay();
+            // timerBadge.classList.remove("timer-warning");
 
-            answers = new Array(QUESTIONS.length).fill(null);
-            currentQuestionIndex = 0;
-            quizContainer.innerHTML = "";
-            statusText.textContent = "";
+            // answers = new Array(QUESTIONS.length).fill(null);
+            // currentQuestionIndex = 0;
+            // quizContainer.innerHTML = "";
+            // statusText.textContent = "";
 
-            quizCard.style.display = "none";
-            timerWrapper.style.display = "none";
-            startCard.style.display = "block";
+            // quizCard.style.display = "none";
+            // timerWrapper.style.display = "none";
+            // startCard.style.display = "block";
+
+
+            location.reload();
+
         }
 
         backToStartBtn.addEventListener("click", () => {
